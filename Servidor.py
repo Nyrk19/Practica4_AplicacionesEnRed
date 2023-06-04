@@ -7,7 +7,7 @@ import time
 HOST = "127.0.0.1"  # Direccion de la interfaz de loopback estándar (localhost)
 PORT = 65432  # Puerto que usa el cliente  (los puertos sin provilegios son > 1023)
 buffer_size = 1024
-numConn = 4
+numConn = 0
 listaConexiones = []
 serveraddr = (HOST, int(PORT))
 Gato = pd.DataFrame()
@@ -163,18 +163,25 @@ def Juego(Client_conn, addr):
 """Acepta conexiones entrantes de clientes y crea un nuevo hilo para cada conexión.
    Además, gestiona la lista de conexiones activas utilizando la función gestion_conexiones."""
 def servirPorSiempre(socketTcp, listaconexiones):
+    global jugadores
     try:
         while True:
             client_conn, client_addr = socketTcp.accept()
-            print("Conectado a", client_addr)
-            #Se agrega el objeto de conexión a la lista de conexiones listaconexiones.
-            listaconexiones.append(client_conn)
-            #Se crea un nuevo hilo para cada conexión aceptada, que llamará a la función recibir_datos
-            thread_read = threading.Thread(target=recibir_datos, args=[client_conn, client_addr])
-            #El hilo se inicia con el método start().
-            thread_read.start()
-            #Se llama a la función gestion_conexiones para gestionar las conexiones activas.
-            gestion_conexiones(listaConexiones)
+            if jugadores > len(listaConexiones):
+                print("Conectado a", client_addr)
+                #Se agrega el objeto de conexión a la lista de conexiones listaconexiones.
+                listaconexiones.append(client_conn)
+                #Se crea un nuevo hilo para cada conexión aceptada, que llamará a la función recibir_datos
+                thread_read = threading.Thread(target=recibir_datos, args=[client_conn, client_addr])
+                #El hilo se inicia con el método start().
+                thread_read.start()
+                #Se llama a la función gestion_conexiones para gestionar las conexiones activas.
+                gestion_conexiones(listaConexiones)
+            else:
+                lock_turno.acquire()
+                client_conn.sendall(b"Los jugadores ya estan completos")
+                client_conn.close()
+                lock_turno.release()
     except Exception as e:
         print(e)
 
@@ -260,6 +267,7 @@ def recibir_datos(conn, addr):
 
 with socket.socket(socket.AF_INET, socket.SOCK_STREAM) as TCPServerSocket:
     jugadores = int(input("Ingresa la cantidad de jugadores: "))
+    numConn = jugadores
     TCPServerSocket.setsockopt(socket.SOL_SOCKET, socket.SO_REUSEADDR, 1)
     TCPServerSocket.bind(serveraddr)
     TCPServerSocket.listen(int(numConn))

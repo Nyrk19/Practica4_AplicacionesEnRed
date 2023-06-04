@@ -24,6 +24,9 @@ def Ini_Juego(TCPClientSocket):
         simbolo = input("Ingrese un simbolo para representarlo: ")
         TCPClientSocket.sendall(str.encode(simbolo))
         print(tabulate(Gato, headers='keys', tablefmt='fancy_grid', showindex=True))
+    elif data == b"Los jugadores ya estan completos":
+        print(data.decode())
+        TCPClientSocket.close()
     else:
         while True:
             nivel = input("Ingresa el nivel: ")
